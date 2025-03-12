@@ -32,15 +32,17 @@
             if (!msg) return;
 
             await fetch(`${apiUrl}/send`, {
-                method: "GET",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: msg })
-            });
+            method: "POST",  // Changed from GET to POST
+            headers: { 
+                "Content-Type": "application/json" 
+            },
+            body: JSON.stringify({ message: msg }) // Send the message body
+        });
 
-            document.getElementById("message").value = "";
-            loadMessages();
-        }
+    document.getElementById("message").value = "";
+    loadMessages();
+}
+
 
         document.getElementById("send").addEventListener("click", sendMessage);
         setInterval(loadMessages, 5000); // Refresh messages every 5 sec
