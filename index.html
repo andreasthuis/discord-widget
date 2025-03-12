@@ -20,6 +20,8 @@
     <script>
         const apiUrl = "https://jolly-scene-076b.andreasdeborger27.workers.dev"; // Replace with your Cloudflare Worker URL
 
+        let lastRateLimit = 0; // Store the time of the last rate limit
+
         // Function to load and display messages
         async function loadMessages() {
             try {
@@ -37,14 +39,21 @@
             }
         }
 
-        // Function to handle sending messages
+        // Function to send a message and handle rate limiting
         async function sendMessage() {
             const msg = document.getElementById("message").value;
             if (!msg) return;
 
             try {
+                // Check if the user is rate-limited
+                if (lastRateLimit && Date.now() < lastRateLimit) {
+                    const retryAfter = (lastRateLimit - Date.now()) / 1000;
+                    alert(`You are rate-limited. Try again in ${retryAfter.toFixed(2)} seconds.`);
+                    return; // Exit if the user is rate-limited
+                }
+
                 const response = await fetch(`${apiUrl}/send`, {
-                    method: "POST",  // Changed from GET to POST
+                    method: "POST",
                     headers: { 
                         "Content-Type": "application/json" 
                     },
@@ -52,7 +61,14 @@
                 });
 
                 if (!response.ok) {
-                    handleErrorResponse(response);
+                    if (response.status === 429) {
+                        // Handle rate limiting: Parse the Retry-After header
+                        const retryAfter = parseInt(response.headers.get('Retry-After'), 10);
+                        lastRateLimit = Date.now() + retryAfter * 1000; // Store the rate limit time
+                        alert(`Rate limit exceeded. Please try again in ${retryAfter} seconds.`);
+                    } else {
+                        handleErrorResponse(response);
+                    }
                     return;
                 }
 
