@@ -63,10 +63,6 @@ async function sendMessage() {
 }
 
 
-    document.getElementById("message").value = "";
-    loadMessages();
-}
-
 
         document.getElementById("send").addEventListener("click", sendMessage);
         setInterval(loadMessages, 5000); // Refresh messages every 5 sec
