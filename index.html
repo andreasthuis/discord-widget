@@ -20,7 +20,8 @@
     <script>
         const apiUrl = "https://jolly-scene-076b.andreasdeborger27.workers.dev"; // Replace with your Cloudflare Worker URL
 
-        let lastRateLimit = 0; // Store the time of the last rate limit
+        let lastRateLimitTime = 0;  // Store when the rate limit ends
+        let retryAfterTime = 0; // Time we need to wait after being rate-limited
 
         // Function to load and display messages
         async function loadMessages() {
@@ -44,14 +45,15 @@
             const msg = document.getElementById("message").value;
             if (!msg) return;
 
-            try {
-                // Check if the user is rate-limited
-                if (lastRateLimit && Date.now() < lastRateLimit) {
-                    const retryAfter = (lastRateLimit - Date.now()) / 1000;
-                    alert(`You are rate-limited. Try again in ${retryAfter.toFixed(2)} seconds.`);
-                    return; // Exit if the user is rate-limited
-                }
+            // Check if the rate limit is in effect
+            const now = Date.now();
+            if (now < lastRateLimitTime) {
+                const remainingTime = (lastRateLimitTime - now) / 1000; // Remaining time in seconds
+                alert(`You are rate-limited. Please wait ${remainingTime.toFixed(2)} seconds.`);
+                return; // Don't proceed with sending if rate-limited
+            }
 
+            try {
                 const response = await fetch(`${apiUrl}/send`, {
                     method: "POST",
                     headers: { 
@@ -62,18 +64,19 @@
 
                 if (!response.ok) {
                     if (response.status === 429) {
-                        // Handle rate limiting: Parse the Retry-After header
-                        const retryAfter = parseInt(response.headers.get('Retry-After'), 10);
-                        lastRateLimit = Date.now() + retryAfter * 1000; // Store the rate limit time
-                        alert(`Rate limit exceeded. Please try again in ${retryAfter} seconds.`);
+                        // Handle rate limiting
+                        retryAfterTime = parseInt(response.headers.get('Retry-After'), 10) * 1000; // Get Retry-After in milliseconds
+                        lastRateLimitTime = Date.now() + retryAfterTime; // Update the rate limit expiry time
+                        alert(`You are being rate-limited. Try again in ${retryAfterTime / 1000} seconds.`);
                     } else {
                         handleErrorResponse(response);
                     }
                     return;
                 }
 
-                document.getElementById("message").value = ""; // Clear message input
-                loadMessages(); // Reload messages after sending
+                // Clear message input and refresh the messages after sending
+                document.getElementById("message").value = "";
+                loadMessages(); 
             } catch (error) {
                 console.error("Error sending message:", error);
             }
@@ -84,7 +87,6 @@
             const errorText = await response.text();
             console.error("Error response:", errorText);
 
-            // Handle specific error codes (e.g., rate limit, 404, etc.)
             if (response.status === 429) {
                 alert("You are being rate-limited. Please try again later.");
             } else if (response.status === 404) {
