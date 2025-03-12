@@ -20,52 +20,72 @@
     <script>
         const apiUrl = "https://jolly-scene-076b.andreasdeborger27.workers.dev"; // Replace with your Cloudflare Worker URL
 
+        // Function to load and display messages
         async function loadMessages() {
-    try {
-        const response = await fetch(`${apiUrl}/messages`);
-        if (!response.ok) {
-            const errorText = await response.text();  // If not OK, read the response as text
-            console.error("Error loading messages:", errorText);
-            return;  // Exit the function if there's an error
-        }
-        const messages = await response.json();  // Parse JSON if the response is OK
-        const chatbox = document.getElementById("chatbox");
-        chatbox.innerHTML = messages.map(msg => `<p>${msg.author.username}: ${msg.content}</p>`).join("");
-    } catch (error) {
-        console.error("Error fetching messages:", error);
-    }
-}
+            try {
+                const response = await fetch(`${apiUrl}/messages`);
+                if (!response.ok) {
+                    handleErrorResponse(response);
+                    return;
+                }
 
-async function sendMessage() {
-    const msg = document.getElementById("message").value;
-    if (!msg) return;
-
-    try {
-        const response = await fetch(`${apiUrl}/send`, {
-            method: "POST",  // Changed from GET to POST
-            headers: { 
-                "Content-Type": "application/json" 
-            },
-            body: JSON.stringify({ message: msg })  // Send the message body
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();  // Read the error response as text
-            console.error("Error sending message:", errorText);
-            return;
+                const messages = await response.json();
+                const chatbox = document.getElementById("chatbox");
+                chatbox.innerHTML = messages.map(msg => `<p>${msg.author.username}: ${msg.content}</p>`).join("");
+            } catch (error) {
+                console.error("Error loading messages:", error);
+            }
         }
 
-        document.getElementById("message").value = "";
-        loadMessages();
-    } catch (error) {
-        console.error("Error sending message:", error);
-    }
-}
+        // Function to handle sending messages
+        async function sendMessage() {
+            const msg = document.getElementById("message").value;
+            if (!msg) return;
 
+            try {
+                const response = await fetch(`${apiUrl}/send`, {
+                    method: "POST",  // Changed from GET to POST
+                    headers: { 
+                        "Content-Type": "application/json" 
+                    },
+                    body: JSON.stringify({ message: msg })
+                });
 
+                if (!response.ok) {
+                    handleErrorResponse(response);
+                    return;
+                }
 
+                document.getElementById("message").value = ""; // Clear message input
+                loadMessages(); // Reload messages after sending
+            } catch (error) {
+                console.error("Error sending message:", error);
+            }
+        }
+
+        // Function to handle error responses (non-200 status)
+        async function handleErrorResponse(response) {
+            const errorText = await response.text();
+            console.error("Error response:", errorText);
+
+            // Handle specific error codes (e.g., rate limit, 404, etc.)
+            if (response.status === 429) {
+                alert("You are being rate-limited. Please try again later.");
+            } else if (response.status === 404) {
+                alert("The resource was not found. Please check the API endpoint.");
+            } else {
+                alert("An unexpected error occurred. Please try again.");
+            }
+        }
+
+        // Event listener for the "Send" button
         document.getElementById("send").addEventListener("click", sendMessage);
-        setInterval(loadMessages, 5000); // Refresh messages every 5 sec
+
+        // Refresh messages every 5 seconds
+        setInterval(loadMessages, 5000);
+
+        // Load initial messages on page load
+        loadMessages();
     </script>
 </body>
 </html>
