@@ -32,7 +32,8 @@
             if (!msg) return;
 
             await fetch(`${apiUrl}/send`, {
-                method: "no-cors",
+                method: "GET",
+                mode: "no-cors",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ message: msg })
             });
