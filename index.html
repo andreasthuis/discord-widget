@@ -6,9 +6,9 @@
     <title>Discord Chat Widget</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
-        #chatbox { width: 300px; height: 400px; border: 1px solid #ccc; overflow-y: auto; padding: 10px; margin: auto; }
-        #message { width: 80%; }
-        #send { width: 15%; }
+        #chatbox { width: 300px; height: 400px; border: 1px solid #ccc; overflow-y: auto; padding: 10px; margin: auto; background: #f9f9f9; }
+        #message { width: 80%; padding: 5px; }
+        #send { width: 15%; padding: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -18,63 +18,48 @@
     <button id="send">Send</button>
 
     <script>
-        const apiUrl = "https://jolly-scene-076b.andreasdeborger27.workers.dev"; // Replace with your Cloudflare Worker URL
+        const apiUrl = "https://your-cloudflare-worker-url"; // Replace with actual URL
+        let lastRateLimitTime = 0;  
 
-        let lastRateLimitTime = 0;  // Store when the rate limit ends
-        let retryAfterTime = 0; // Time we need to wait after being rate-limited
-
-        // Function to load and display messages
         async function loadMessages() {
             try {
                 const response = await fetch(`${apiUrl}/messages`);
-                if (!response.ok) {
-                    handleErrorResponse(response);
-                    return;
-                }
+                if (!response.ok) return console.error("Error loading messages");
 
                 const messages = await response.json();
                 const chatbox = document.getElementById("chatbox");
-                chatbox.innerHTML = messages.map(msg => `<p>${msg.author.username}: ${msg.content}</p>`).join("");
+                chatbox.innerHTML = messages.map(msg => `<p><strong>${msg.author}:</strong> ${msg.content}</p>`).join("");
+                chatbox.scrollTop = chatbox.scrollHeight;
             } catch (error) {
-                console.error("Error loading messages:", error);
+                console.error("Error fetching messages:", error);
             }
         }
 
-        // Function to send a message and handle rate limiting
         async function sendMessage() {
             const msg = document.getElementById("message").value;
-            if (!msg) return;
+            if (!msg) return alert("Message cannot be empty!");
 
-            // Check if the rate limit is in effect
             const now = Date.now();
             if (now < lastRateLimitTime) {
-                const remainingTime = (lastRateLimitTime - now) / 1000; // Remaining time in seconds
-                alert(`You are rate-limited. Please wait ${remainingTime.toFixed(2)} seconds.`);
-                return; // Don't proceed with sending if rate-limited
+                alert(`Rate limited. Try again in ${(lastRateLimitTime - now) / 1000} seconds.`);
+                return;
             }
 
             try {
                 const response = await fetch(`${apiUrl}/send`, {
                     method: "POST",
-                    headers: { 
-                        "Content-Type": "application/json" 
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ message: msg })
                 });
 
-                if (!response.ok) {
-                    if (response.status === 429) {
-                        // Handle rate limiting
-                        retryAfterTime = parseInt(response.headers.get('Retry-After'), 10) * 1000; // Get Retry-After in milliseconds
-                        lastRateLimitTime = Date.now() + retryAfterTime; // Update the rate limit expiry time
-                        alert(`You are being rate-limited. Try again in ${retryAfterTime / 1000} seconds.`);
-                    } else {
-                        handleErrorResponse(response);
-                    }
-                    return;
+                if (response.status === 429) {
+                    const retryAfter = parseInt(response.headers.get('Retry-After'), 10) * 1000;
+                    lastRateLimitTime = Date.now() + retryAfter;
+                    alert(`Rate limited. Try again in ${retryAfter / 1000} seconds.`);
+                } else if (!response.ok) {
+                    alert("Error sending message.");
                 }
 
-                // Clear message input and refresh the messages after sending
                 document.getElementById("message").value = "";
                 loadMessages(); 
             } catch (error) {
@@ -82,27 +67,8 @@
             }
         }
 
-        // Function to handle error responses (non-200 status)
-        async function handleErrorResponse(response) {
-            const errorText = await response.text();
-            console.error("Error response:", errorText);
-
-            if (response.status === 429) {
-                alert("You are being rate-limited. Please try again later.");
-            } else if (response.status === 404) {
-                alert("The resource was not found. Please check the API endpoint.");
-            } else {
-                alert("An unexpected error occurred. Please try again.");
-            }
-        }
-
-        // Event listener for the "Send" button
         document.getElementById("send").addEventListener("click", sendMessage);
-
-        // Refresh messages every 5 seconds
         setInterval(loadMessages, 5000);
-
-        // Load initial messages on page load
         loadMessages();
     </script>
 </body>
