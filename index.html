@@ -32,8 +32,9 @@
         const messages = await response.json();
         const chatbox = document.getElementById("chatbox");
 
+        // Make sure we're correctly extracting the username and message content
         chatbox.innerHTML = messages.map(msg => `
-            <p><strong>${msg.author.username}:</strong> ${msg.content}</p>
+            <p><strong>${msg.author?.username}:</strong> ${msg.content || "(No content)"}</p>
         `).join("");
 
         chatbox.scrollTop = chatbox.scrollHeight; // Auto-scroll to the latest message
@@ -42,7 +43,6 @@
         console.error("Error loading messages:", error);
     }
 }
-
 
         async function sendMessage() {
             const msg = document.getElementById("message").value;
