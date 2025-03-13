@@ -22,18 +22,27 @@
         let lastRateLimitTime = 0;  
 
         async function loadMessages() {
-            try {
-                const response = await fetch(`${apiUrl}/messages`);
-                if (!response.ok) return console.error("Error loading messages");
-
-                const messages = await response.json();
-                const chatbox = document.getElementById("chatbox");
-                chatbox.innerHTML = messages.map(msg => `<p><strong>${msg.author}:</strong> ${msg.content}</p>`).join("");
-                chatbox.scrollTop = chatbox.scrollHeight;
-            } catch (error) {
-                console.error("Error fetching messages:", error);
-            }
+    try {
+        const response = await fetch(`${apiUrl}/messages`);
+        if (!response.ok) {
+            handleErrorResponse(response);
+            return;
         }
+
+        const messages = await response.json();
+        const chatbox = document.getElementById("chatbox");
+
+        chatbox.innerHTML = messages.map(msg => `
+            <p><strong>${msg.author.username}:</strong> ${msg.content}</p>
+        `).join("");
+
+        chatbox.scrollTop = chatbox.scrollHeight; // Auto-scroll to the latest message
+
+    } catch (error) {
+        console.error("Error loading messages:", error);
+    }
+}
+
 
         async function sendMessage() {
             const msg = document.getElementById("message").value;
