@@ -15,7 +15,7 @@
             margin: auto; 
             background: #f9f9f9; 
             display: flex;
-            flex-direction: column-reverse;
+            flex-direction: column;
         }
         #message { width: 80%; padding: 5px; }
         #send { width: 15%; padding: 5px; cursor: pointer; }
@@ -41,7 +41,7 @@
                 const chatbox = document.getElementById("chatbox");
                 
                 const atBottom = chatbox.scrollTop + chatbox.clientHeight >= chatbox.scrollHeight - 20;
-                chatbox.innerHTML = messages.reverse().map(msg => `
+                chatbox.innerHTML = messages.map(msg => `
                     <p><strong>${msg.author?.username}:</strong> ${msg.content || "(No content)"}</p>
                 `).join("");
                 
